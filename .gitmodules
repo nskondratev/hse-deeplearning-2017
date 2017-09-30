@@ -4,3 +4,6 @@
 [submodule "mtcnn-dockerfiles"]
 	path = DockerFiles
 	url = https://github.com/edmBernard/DockerFiles
+[submodule "mtcnn"]
+	path = mtcnn
+	url = https://github.com/edmbernard/mtcnn
