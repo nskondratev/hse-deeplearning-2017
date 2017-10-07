@@ -46,7 +46,7 @@ def transform_annotations_file(path_to_file, output_file_path=None):
 
     print('Outfile: {}'.format(output_file_path))
     # Compile needed regexps
-    box_pattern = re.compile('^([0-9]+ ){9}[0-9]+\n$')
+    box_pattern = re.compile('^([0-9]+ ){9}[0-9]+( )?\n$')
 
     with open(output_file_path, 'w') as out_f:
         with open(path_to_file, 'r') as inp_f:
