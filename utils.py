@@ -32,12 +32,13 @@ def jaccard_distance(box1, box2):
     return inter / (S1 + S2 - inter)
 
 
-def calc_img_score(box_found, box_true):
+def calc_img_score(box_found, box_true, distance_threshold = 0.5):
     distances = []
-    N = len(box_true)
+    N = max(len(box_true), len(box_found))
     for box1 in box_found:
         for box2 in box_true:
-            distances.append(jaccard_distance(box1, box2))
+            distance = jaccard_distance(box1, box2)
+            distances.append(1 if distance > distance_threshold else 0)
     distances.sort(reverse=True)
     dist_sum = np.sum(distances[:N])
     score = (dist_sum) / N
