@@ -58,7 +58,6 @@ def apply_mtcnn_to_image(filename, root_folder, mtcnn_detector = None):
     print('[{}] Apply MTCNN to image...'.format(filename))
     if mtcnn_detector is None:
         mtcnn_detector = init_mtcnn_detector()
-    print('[{}] MTCNN Detector is initialized.'.format(filename))
     img = cv2.imread(os.path.join(root_folder, filename))
 
 
