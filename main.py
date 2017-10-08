@@ -9,6 +9,7 @@ from mtcnn.core.MtcnnDetector import MtcnnDetector
 import os
 import time
 import argparse
+from utils import calc_total_score
 
 
 def init_mtcnn_detector(prefix=None, epoch=None, batch_size=None, ctx=None,
@@ -81,7 +82,6 @@ def apply_mtcnn_to_image(filename, root_folder, mtcnn_detector = None):
 
 
 def eval_mtcnn(input_folder):
-    t1 = time.time()
     pool = Pool()
     # mtcnn_detector = init_mtcnn_detector()
     all_images = []
@@ -89,20 +89,31 @@ def eval_mtcnn(input_folder):
         all_images += [(os.path.join(sub_folder, x), input_folder, None) for x in
                        os.listdir(os.path.join(input_folder, sub_folder))]
     res = pool.starmap(apply_mtcnn_to_image, all_images)
-    output_filename = '{}_results.txt'.format(input_folder)
+    output_filename = '{}_mtcnn_results.txt'.format(input_folder)
     with open(output_filename, 'w') as f:
         f.write(''.join(res))
-        print('Total time: ', time.time() - t1)
         print('Finish')
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='MTCNN evaluation on folder')
-    parser.add_argument('--folder', type=str, default='test_widerface')
+    parser.add_argument('--folder', type=str, default='widerface')
+    parser.add_argument('--report_filename', type=str, default='report.txt')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = parse_args()
     # MTCNN model evaluation
+    t1 = time.time()
+    print('Start evaluation MTCNN on folder {}'.format(args.folder))
     eval_mtcnn(args.folder)
+    mtcnn_time = time.time() - t1
+    print('Total time: ', mtcnn_time)
+    mtcnn_results_filename = '{}_mtcnn_results.txt'.format(args.folder)
+    truth_results_filename = 'wider_face_val_bbx_gt._transformed.txt'
+    mtcnn_score = calc_total_score(mtcnn_results_filename, truth_results_filename)
+    with open(args.report_filename, 'w') as rf:
+        rf.write('==== MTCNN results ====\nExecution time: {} seconds\nTotal score: {}\n'.format(mtcnn_time, mtcnn_score))
+
+
