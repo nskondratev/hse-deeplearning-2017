@@ -9,7 +9,8 @@ from mtcnn.core.MtcnnDetector import MtcnnDetector
 import os
 import time
 import argparse
-from utils import calc_total_score
+from utils import calc_total_score, calc_img_score
+import pickle
 
 
 def init_mtcnn_detector(prefix=None, epoch=None, batch_size=None, ctx=None,
@@ -54,7 +55,7 @@ def init_mtcnn_detector(prefix=None, epoch=None, batch_size=None, ctx=None,
                          stride=stride, threshold=thresh, slide_window=slide_window)
 
 
-def apply_mtcnn_to_image(filename, root_folder, mtcnn_detector = None):
+def apply_mtcnn_to_image(filename, root_folder, mtcnn_detector = None, save_processed_image = False):
     print('[{}] Apply MTCNN to image...'.format(filename))
     if mtcnn_detector is None:
         mtcnn_detector = init_mtcnn_detector()
@@ -73,8 +74,24 @@ def apply_mtcnn_to_image(filename, root_folder, mtcnn_detector = None):
     faces_count = 0
     if boxes_c is not None:
         faces_count = len(boxes_c)
+        if save_processed_image:
+            draw = img.copy()
+            font = cv2.FONT_HERSHEY_SIMPLEX
         for b in boxes_c:
             res += '{} {} {} {}\n'.format(int(b[0]), int(b[1]), int(b[2]), int(b[3]))
+            if save_processed_image:
+                cv2.rectangle(draw, (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), (0, 255, 255), 1)
+                cv2.putText(draw, '%.3f' % b[4], (int(b[0]), int(b[1])), font, 0.4, (255, 255, 255), 1)
+
+        if save_processed_image:
+            with open('wider_face_val_bbx_gt._transformed.txt.pkl', 'rb') as f:
+                truth = pickle.load(f)
+                truth_boxes = truth[filename]
+                for b in truth_boxes:
+                    cv2.rectangle(draw, (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), (0, 255, 0), 1)
+                score = calc_img_score(boxes_c, truth_boxes)
+                cv2.putText(draw, '%.3f' % score, (10, 10), font, 0.4, (255, 255, 255), 1)
+                cv2.imwrite('processed_{}'.format(os.path.basename(filename)), draw)
 
     print('[{}] Founded {} boxes. Finish.'.format(filename, faces_count))
     return res
