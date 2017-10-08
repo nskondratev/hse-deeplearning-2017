@@ -12,7 +12,7 @@ import argparse
 
 
 def init_mtcnn_detector(prefix=None, epoch=None, batch_size=None, ctx=None,
-                        thresh=None, min_face_size=24,
+                        thresh=None, min_face_size=12,
                         stride=2, slide_window=False):
     # Set default prefix
     if prefix is None:
