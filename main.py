@@ -1,7 +1,9 @@
-from multiprocessing import Pool
-import os
+import matlab.engine
+
 import time
 import argparse
+from multiprocessing import Pool
+import os
 import pickle
 
 import mxnet as mx
@@ -13,11 +15,40 @@ from mtcnn.core.fcn_detector import FcnDetector
 from mtcnn.tools.load_model import load_param
 from mtcnn.core.MtcnnDetector import MtcnnDetector
 
-import matlab.engine
-
-eng = matlab.engine.start_matlab()
-
 from utils import calc_total_score, calc_img_score
+
+
+# Tiny Face Detector functions
+def apply_tiny_fd_to_image(filename, root_folder):
+    eng = matlab.engine.start_matlab()
+    print('[{}] Start processing image...'.format(filename))
+    boxes_c = eng.tiny_fd(os.path.join(root_folder, filename))
+    res = filename + '\n'
+    faces_count = 0
+    if boxes_c is not None:
+        faces_count = len(boxes_c)
+        for b in boxes_c:
+            res += '{} {} {} {}\n'.format(int(b[0]), int(b[1]), int(b[2]), int(b[3]))
+    print('[{}] Founded {} boxes. Finish.'.format(filename, faces_count))
+    return res
+
+
+def eval_tiny_fd(input_folder):
+    pool = Pool()
+    all_images = []
+    for sub_folder in os.listdir(input_folder):
+        all_images += [(os.path.join(sub_folder, x), input_folder) for x in
+                       os.listdir(os.path.join(input_folder, sub_folder))]
+    res = pool.starmap(apply_tiny_fd_to_image, all_images)
+    pool.close()
+    pool.join()
+    # res = []
+    # for i in range(len(all_images)):
+    #     res.append(apply_tiny_fd_to_image(all_images[i][0], all_images[i][1]))
+    output_filename = '{}_tiny_fd_results.txt'.format(input_folder)
+    with open(output_filename, 'w') as f:
+        f.write(''.join(res))
+        print('Finish')
 
 
 # MTCNN functions
@@ -117,36 +148,10 @@ def eval_mtcnn(input_folder):
         print('Finish')
 
 
-# Tiny Face Detector functions
-def apply_tiny_fd_to_image(filename, root_folder):
-    boxes_c = eng.tiny_fd(os.path.join(root_folder, filename))
-    res = filename + '\n'
-    faces_count = 0
-    if boxes_c is not None:
-        faces_count = len(boxes_c)
-        for b in boxes_c:
-            res += '{} {} {} {}\n'.format(int(b[0]), int(b[1]), int(b[2]), int(b[3]))
-    print('[{}] Founded {} boxes. Finish.'.format(filename, faces_count))
-    return res
-
-
-def eval_tiny_fd(input_folder):
-    pool = Pool()
-    all_images = []
-    for sub_folder in os.listdir(input_folder):
-        all_images += [(os.path.join(sub_folder, x), input_folder, None) for x in
-                       os.listdir(os.path.join(input_folder, sub_folder))]
-    res = pool.starmap(apply_tiny_fd_to_image, all_images)
-    output_filename = '{}_tiny_fd_results.txt'.format(input_folder)
-    with open(output_filename, 'w') as f:
-        f.write(''.join(res))
-        print('Finish')
-
-
 def parse_args():
     parser = argparse.ArgumentParser(description='Evaluation on folder')
     parser.add_argument('--folder', type=str, default='widerface')
-    parser.add_argument('--report_filename', type=str, default='report.txt')
+    parser.add_argument('--report_filename', type=str, default=None)
     parser.add_argument('--model', type=str, default='mtcnn')
     parser.add_argument('--gt_filename', type=str, default='wider_face_val_bbx_gt._transformed.txt')
     return parser.parse_args()
@@ -158,13 +163,18 @@ if __name__ == '__main__':
     t1 = time.time()
     print('Start evaluation {} on folder {}'.format(args.model, args.folder))
     if args.model == 'mtcnn':
-        eval_mtcnn(args.folder)
+        # eval_mtcnn(args.folder)
+        print('')
     elif args.model == 'tiny_fd':
         eval_tiny_fd(args.folder)
     execution_time = time.time() - t1
     print('Total time: ', execution_time)
     results_filename = '{}_{}_results.txt'.format(args.folder, args.model)
     score = calc_total_score(results_filename, args.gt_filename)
-    with open(args.report_filename, 'w') as rf:
+    if args.report_filename is None:
+        report_filename = 'report_{}.txt'.format(args.model)
+    else:
+        report_filename = args.report_filename
+    with open(report_filename, 'w') as rf:
         rf.write('==== {} results ====\nExecution time: {} seconds\nTotal score: {}\n'
                  .format(args.model, execution_time, score))
