@@ -34,7 +34,7 @@ def jaccard_distance(box1, box2):
 
 def calc_img_score(box_found, box_true, distance_threshold = 0.5):
     distances = []
-    N = max(len(box_true), len(box_found))
+    N = len(box_true)
     for box1 in box_found:
         for box2 in box_true:
             distance = jaccard_distance(box1, box2)
