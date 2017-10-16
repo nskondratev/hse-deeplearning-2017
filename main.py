@@ -2,9 +2,10 @@ import matlab.engine
 
 import time
 import argparse
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 import os
 import pickle
+import math
 
 import mxnet as mx
 import cv2
@@ -15,21 +16,27 @@ from mtcnn.core.fcn_detector import FcnDetector
 from mtcnn.tools.load_model import load_param
 from mtcnn.core.MtcnnDetector import MtcnnDetector
 
-from utils import calc_total_score, calc_img_score
+from utils import calc_total_score, calc_img_score, chunks
 
 
 # Tiny Face Detector functions
-def apply_tiny_fd_to_image(filename, root_folder):
+def apply_tiny_fd_to_images(files, root_folder):
+    print('Before start MATLAB engine. Files count: {}'.format(len(files)))
+    t1 = time.time()
     eng = matlab.engine.start_matlab()
-    print('[{}] Start processing image...'.format(filename))
-    boxes_c = eng.tiny_fd(os.path.join(root_folder, filename))
-    res = filename + '\n'
-    faces_count = 0
-    if boxes_c is not None:
-        faces_count = len(boxes_c)
-        for b in boxes_c:
-            res += '{} {} {} {}\n'.format(int(b[0]), int(b[1]), int(b[2]), int(b[3]))
-    print('[{}] Founded {} boxes. Finish.'.format(filename, faces_count))
+    me_started = time.time() - t1
+    print('Started MATLAB engine in {} seconds'.format(me_started))
+    res = ''
+    for filename in files:
+        print('[{}] Start processing image...'.format(filename))
+        boxes_c = eng.tiny_fd(os.path.join(root_folder, filename))
+        res += filename + '\n'
+        faces_count = 0
+        if boxes_c is not None:
+            faces_count = len(boxes_c)
+            for b in boxes_c:
+                res += '{} {} {} {}\n'.format(int(b[0]), int(b[1]), int(b[2]), int(b[3]))
+        print('[{}] Founded {} boxes. Finish.'.format(filename, faces_count))
     return res
 
 
@@ -37,14 +44,14 @@ def eval_tiny_fd(input_folder):
     pool = Pool()
     all_images = []
     for sub_folder in os.listdir(input_folder):
-        all_images += [(os.path.join(sub_folder, x), input_folder) for x in
+        all_images += [os.path.join(sub_folder, x) for x in
                        os.listdir(os.path.join(input_folder, sub_folder))]
-    res = pool.starmap(apply_tiny_fd_to_image, all_images)
+    chunk_size = int(math.ceil(float(len(all_images)) / float(cpu_count())))
+    chunks_images = chunks(all_images, chunk_size)
+    to_process = [(filenames, input_folder) for filenames in chunks_images]
+    res = pool.starmap(apply_tiny_fd_to_images, to_process)
     pool.close()
     pool.join()
-    # res = []
-    # for i in range(len(all_images)):
-    #     res.append(apply_tiny_fd_to_image(all_images[i][0], all_images[i][1]))
     output_filename = '{}_tiny_fd_results.txt'.format(input_folder)
     with open(output_filename, 'w') as f:
         f.write(''.join(res))
@@ -163,14 +170,14 @@ if __name__ == '__main__':
     t1 = time.time()
     print('Start evaluation {} on folder {}'.format(args.model, args.folder))
     if args.model == 'mtcnn':
-        # eval_mtcnn(args.folder)
-        print('')
+        eval_mtcnn(args.folder)
     elif args.model == 'tiny_fd':
         eval_tiny_fd(args.folder)
     execution_time = time.time() - t1
     print('Total time: ', execution_time)
     results_filename = '{}_{}_results.txt'.format(args.folder, args.model)
     score = calc_total_score(results_filename, args.gt_filename)
+    print('Total score: {}'.format(score))
     if args.report_filename is None:
         report_filename = 'report_{}.txt'.format(args.model)
     else:
