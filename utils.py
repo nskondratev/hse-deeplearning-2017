@@ -7,6 +7,7 @@ from multiprocessing import Pool
 BOX_PATTERN = re.compile('^([0-9]+ ){9}[0-9]+( )?\n$')
 TRANSFORMED_BOX_PATTERN = re.compile('^([0-9]+ ){3}[0-9]+\n$')
 
+
 def jaccard_distance(box1, box2):
     """Compute IoU between detect box and gt boxes
     Parameters:
@@ -32,7 +33,7 @@ def jaccard_distance(box1, box2):
     return inter / (S1 + S2 - inter)
 
 
-def calc_img_score(box_found, box_true, distance_threshold = 0.5):
+def calc_img_score(box_found, box_true, distance_threshold=0.5):
     distances = []
     N = len(box_true)
     for box1 in box_found:
@@ -75,7 +76,7 @@ def transform_annotations_file(path_to_file, output_file_path=None):
             cur_line = inp_f.readline()
 
 
-def parse_image_data(filename, use_pickled = False):
+def parse_image_data(filename, use_pickled=False):
     print('[{}] Parse image data'.format(filename))
     pickled_filename = '{}.pkl'.format(filename)
     if use_pickled and os._exists(pickled_filename):
@@ -123,3 +124,8 @@ def calc_total_score(result_filename, truth_filename):
     pool.join()
     n = len(scores)
     return float(sum(scores)) / float(n)
+
+
+def chunks(l, n):
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
