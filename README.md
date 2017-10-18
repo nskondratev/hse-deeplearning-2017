@@ -45,3 +45,12 @@ $ git clone --recursive https://github.com/nskondratev/hse-deeplearning-2017.git
 ```bash
 $ python3 main.py --folder widerface --model mtcnn
 ```
+## Сравнение MTCNN vs Tiny Face Detector
+Мы запускали обе модели на тестовой выборке из 976 изображений, которые находятся в папке *widerface*.  
+Результаты представлены в таблице:
+
+|                    | Ошибка   | Время работы |
+|--------------------|----------|--------------|
+| MTCNN              | 32 %     | 3506 s       |
+| Tiny Face Detector | 13 %     | 40435 s      |
+
